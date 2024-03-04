@@ -1,0 +1,29 @@
+[
+  {
+    "id": "2a3b83df-53d9-447d-9751-4fd00c38be7f",
+    "title": "samngung",
+    "description": "Nuevo samnsung",
+    "price": 100,
+    "thumbnail": "url_de_la_imagen",
+    "code": "NP123",
+    "stock": 10
+  },
+  {
+    "id": "3aaa032f-86c0-47a3-9198-61c9bbc8b21d",
+    "title": "Iphone12",
+    "description": "El nuevo iphone para usar",
+    "price": 100,
+    "thumbnail": "url_de_la_imagen",
+    "code": "NP124",
+    "stock": 10
+  },
+  {
+    "id": "6acee8b1-1b2c-4c7b-a6a2-dca4aa7a9b72",
+    "title": "Iphone15",
+    "description": "El mejor de los mejores",
+    "price": 200,
+    "thumbnail": "url_de_la_imagen",
+    "code": "NP122",
+    "stock": 10
+  }
+]
