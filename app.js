@@ -1,7 +1,8 @@
 const ServerBase = require('./serverBase');
 
 const port = 3000;
-const filePath = 'productos.json';
+const productFilePath = 'productos.json';
+const cartFilePath = 'carrito.json';
 
-const server = new ServerBase(port, filePath);
+const server = new ServerBase(port, productFilePath, cartFilePath);
 server.start();
