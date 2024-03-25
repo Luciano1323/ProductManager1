@@ -1,100 +1,68 @@
-const fs = require("fs");
-const { v4: uuidv4 } = require("uuid");
+const { Product } = require('./db');
 
 class ProductManager {
-  constructor() {
-    this.path = "productos.json";
-    this.products = [];
-    this.loadProducts();
-  }
+  constructor() {}
 
-  loadProducts() {
+  async addProduct({ title, description, price, thumbnail, code, stock }) {
     try {
-      const data = fs.readFileSync(this.path, "utf8");
-      this.products = JSON.parse(data) || [];
+      const newProduct = new Product({
+        title,
+        description,
+        price,
+        thumbnail,
+        code,
+        stock,
+      });
+      await newProduct.save();
+      return newProduct;
     } catch (error) {
-      console.error("Error loading products:", error.message);
+      throw new Error("Error adding product: " + error.message);
     }
   }
 
-  saveProducts() {
+  async getProducts() {
     try {
-      const productsToSave = this.products.filter(product => product !== null);
-      fs.writeFileSync(
-        this.path,
-        JSON.stringify(productsToSave, null, 2),
-        "utf8"
-      );
+      const products = await Product.find();
+      return products;
     } catch (error) {
-      console.error("Error saving products:", error.message);
+      throw new Error("Error fetching products: " + error.message);
     }
   }
 
-  addProduct({ title, description, price, thumbnail, code, stock }) {
-    if (!title || !description || !price || !thumbnail || !code || !stock) {
-      throw new Error("Error: All fields are required.");
+  async getProductById(productId) {
+    try {
+      const product = await Product.findById(productId);
+      if (!product) {
+        throw new Error("Product not found");
+      }
+      return product;
+    } catch (error) {
+      throw new Error("Error fetching product: " + error.message);
     }
-
-    const id = uuidv4();
-    const newProduct = {
-      id,
-      title,
-      description,
-      price,
-      thumbnail,
-      code,
-      stock,
-    };
-
-    const productWithSameCode = this.products.find(product => product.code === code);
-    if (productWithSameCode) {
-      throw new Error("Error: Product code already exists.");
-    }
-
-    this.products.push(newProduct);
-    this.saveProducts();
-    return newProduct;
   }
 
-  getProducts() {
-    return this.products.filter(product => product !== null);
+  async updateProduct(productId, updatedFields) {
+    try {
+      const updatedProduct = await Product.findByIdAndUpdate(productId, updatedFields, { new: true });
+      if (!updatedProduct) {
+        throw new Error("Product not found");
+      }
+      return updatedProduct;
+    } catch (error) {
+      throw new Error("Error updating product: " + error.message);
+    }
   }
 
-  getProductById(productId) {
-    const product = this.products.find((product) => product.id === productId);
-
-    if (!product) {
-      console.error("Error: Product not found.");
-      return null;
+  async deleteProduct(productId) {
+    try {
+      const deletedProduct = await Product.findByIdAndDelete(productId);
+      if (!deletedProduct) {
+        throw new Error("Product not found");
+      }
+      return deletedProduct;
+    } catch (error) {
+      throw new Error("Error deleting product: " + error.message);
     }
-
-    return product;
-  }
-
-  updateProduct(productId, updatedFields) {
-    const index = this.products.findIndex((product) => product.id === productId);
-
-    if (index === -1) {
-      throw new Error("Error: Product not found.");
-    }
-
-    const product = this.products[index];
-    const updatedProduct = { ...product, ...updatedFields };
-
-    this.products[index] = updatedProduct;
-    this.saveProducts();
-  }
-
-  deleteProduct(productId) {
-    const initialLength = this.products.length;
-    this.products = this.products.filter((product) => product.id !== productId);
-
-    if (initialLength === this.products.length) {
-      console.error("Error: Product not found.");
-      return null;
-    }
-
-    this.saveProducts();
   }
 }
 
