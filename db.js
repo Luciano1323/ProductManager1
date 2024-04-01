@@ -18,6 +18,12 @@ const productSchema = new Schema({
 
 const Product = mongoose.model('Product', productSchema);
 
+const cartSchema = new Schema({
+  products: [{ type: Schema.Types.ObjectId, ref: 'Product' }]
+});
+
+const Cart = mongoose.model('Cart', cartSchema);
+
 const messageSchema = new Schema({
   user: String,
   message: String,
@@ -27,5 +33,6 @@ const Message = mongoose.model('Message', messageSchema);
 
 module.exports = {
   Product,
+  Cart,
   Message,
 };
