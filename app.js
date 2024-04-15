@@ -2,11 +2,15 @@ const express = require("express");
 const exphbs = require("express-handlebars");
 const http = require("http");
 const socketIO = require("socket.io");
-const session = require("express-session"); // Agregar express-session para manejar sesiones
+const session = require("express-session");
+const passport = require("passport");
+const LocalStrategy = require("passport-local").Strategy;
+const GitHubStrategy = require("passport-github").Strategy;
+const bcrypt = require("bcrypt");
+const { User } = require("./models");
 const ProductManager = require("./productManager");
 const CartManager = require("./cartManager");
-const { User } = require("./models"); // Importa el modelo de usuario
-const { mongoose } = require("./db"); // Importa la conexión a la base de datos
+const { mongoose } = require("./db");
 
 const app = express();
 const server = http.createServer(app);
@@ -29,6 +33,106 @@ app.use(
   })
 );
 
+// Configurar Passport.js
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Configure Passport Local Strategy
+passport.use(
+  new LocalStrategy(async (email, password, done) => {
+    try {
+      const user = await User.findOne({ email });
+      if (!user) return done(null, false);
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) return done(null, false);
+      return done(null, user);
+    } catch (error) {
+      return done(error);
+    }
+  })
+);
+
+// Configure Passport GitHub Strategy
+passport.use(
+  new GitHubStrategy(
+    {
+      clientID: GITHUB_CLIENT_ID,
+      clientSecret: GITHUB_CLIENT_SECRET,
+      callbackURL: "http://localhost:3000/auth/github/callback"
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        let user = await User.findOne({ githubId: profile.id });
+        if (!user) {
+          user = await User.create({
+            githubId: profile.id,
+            username: profile.username
+          });
+        }
+        return done(null, user);
+      } catch (error) {
+        return done(error);
+      }
+    }
+  )
+);
+
+// Serialize/deserialize user
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findById(id);
+    done(null, user);
+  } catch (error) {
+    done(error);
+  }
+});
+
+// Ruta para iniciar sesión con Passport Local Strategy
+app.post("/login", passport.authenticate("local", { failureRedirect: "/login" }), (req, res) => {
+  res.redirect("/products");
+});
+
+// Ruta para iniciar sesión con Passport GitHub Strategy
+app.get("/auth/github", passport.authenticate("github"));
+
+app.get("/auth/github/callback", passport.authenticate("github", { failureRedirect: "/login" }), (req, res) => {
+  res.redirect("/products");
+});
+
+// Ruta para el login
+app.get("/login", (req, res) => {
+  res.render("login");
+});
+
+// Ruta para el logout
+app.get("/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error(err);
+    }
+    res.redirect("/login");
+  });
+});
+
+// Ruta para la vista de productos (requiere autenticación)
+app.get("/products", isAuthenticated, async (req, res) => {
+  try {
+    const products = await productManager.getProducts();
+    res.render("products", { products });
+  } catch (error) {
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Ruta para la vista de perfil (requiere autenticación)
+app.get("/profile", isAuthenticated, (req, res) => {
+  res.render("profile", { user: req.session.user });
+});
+
 // Middleware para verificar la sesión del usuario
 const isAuthenticated = (req, res, next) => {
   if (req.session && req.session.user) {
@@ -46,74 +150,6 @@ const isAdmin = (req, res, next) => {
     res.redirect("/profile");
   }
 };
-
-// Ruta para el login
-app.get("/login", (req, res) => {
-  res.render("login");
-});
-
-// Ruta para el logout
-app.get("/logout", (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      console.error(err);
-    }
-    res.redirect("/login");
-  });
-});
-
-// Ruta para manejar el formulario de login
-app.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-
-  try {
-    // Busca el usuario en la base de datos por su correo electrónico
-    const user = await User.findOne({ email });
-
-    if (!user) {
-      // Si el usuario no existe, devuelve un mensaje de error
-      return res.status(401).send("Correo electrónico o contraseña incorrectos");
-    }
-
-    // Verifica si la contraseña proporcionada coincide con la almacenada en la base de datos
-    const isPasswordValid = await user.comparePassword(password);
-
-    if (!isPasswordValid) {
-      // Si la contraseña no coincide, devuelve un mensaje de error
-      return res.status(401).send("Correo electrónico o contraseña incorrectos");
-    }
-
-    // Si las credenciales son válidas, establece la sesión del usuario
-    req.session.user = {
-      id: user._id,
-      email: user.email,
-      role: user.role // Suponiendo que tienes un campo "rol" en tu modelo de usuario
-    };
-
-    // Redirige al usuario a la página de productos
-    res.redirect("/products");
-
-  } catch (error) {
-    // Maneja errores de la base de datos
-    console.error("Error de autenticación:", error);
-    res.status(500).send("Error interno del servidor");
-  }
-});
-
-// Ruta para la vista de productos (requiere autenticación)
-app.get("/products", isAuthenticated, async (req, res) => {
-  try {
-    const products = await productManager.getProducts();
-    res.render("products", { products });
-  } catch (error) {
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-// Ruta para la vista de perfil (requiere autenticación)
-app.get("/profile", isAuthenticated, (req, res) => {
-  res.render("profile", { user: req.session.user });
-});
 
 // Otros endpoints y configuraciones...
 
