@@ -2,21 +2,41 @@ const express = require("express");
 const exphbs = require("express-handlebars");
 const http = require("http");
 const socketIO = require("socket.io");
-const ProductManager = require("./productManager");
-const CartManager = require("./cartManager"); // Importa el gestor de carrito
-const { Message } = require('./db');
+const passport = require('passport');
+const session = require('express-session');
+const cookieParser = require('cookie-parser');
+const mongoose = require('mongoose');
+const authRoutes = require('./authRoutes');
+const apiRoutes = require('./apiRoutes');
+const User = require('./userModel');
+
+// Configuración de Passport
+require('./passportConfig');
+require('./jwtStrategy');
+
+mongoose.connect('mongodb://127.0.0.1:27017/your_database', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIO(server);
 
-const productManager = new ProductManager();
-const cartManager = new CartManager(); // Instancia el gestor de carrito
-
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use(session({ secret: 'your_secret_key', resave: true, saveUninitialized: true }));
+app.use(passport.initialize());
+app.use(passport.session());
+
 app.engine('.hbs', exphbs.engine({ extname: '.hbs', defaultLayout: "main"}));
 app.set("view engine", ".hbs");
 app.use(express.static(__dirname + "/public"));
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/sessions', apiRoutes);
 
 // Endpoint para obtener productos con paginación, filtros y ordenamiento
 app.get("/api/products", async (req, res) => {
@@ -39,8 +59,6 @@ app.delete("/api/carts/:cid/products/:pid", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
-// Otros endpoints para la gestión del carrito...
 
 // Ruta para renderizar la vista home.handlebars
 app.get("/home", async (req, res) => {
