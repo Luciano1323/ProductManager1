@@ -2,86 +2,140 @@ const express = require("express");
 const exphbs = require("express-handlebars");
 const http = require("http");
 const socketIO = require("socket.io");
-const passport = require('passport');
-const session = require('express-session');
-const cookieParser = require('cookie-parser');
-const mongoose = require('mongoose');
-const authRoutes = require('./authRoutes');
-const apiRoutes = require('./apiRoutes');
-const User = require('./userModel');
-
-// Configuración de Passport
-require('./passportConfig');
-require('./jwtStrategy');
-
-mongoose.connect('mongodb://127.0.0.1:27017/your_database', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+const passport = require("passport");
+const LocalStrategy = require("passport-local").Strategy;
+const GitHubStrategy = require("passport-github").Strategy;
+const bcrypt = require("bcrypt");
+const { User } = require("./models");
+const ProductManager = require("./productManager");
+const CartManager = require("./cartManager");
+const mongoose = require("mongoose");
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIO(server);
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(session({ secret: 'your_secret_key', resave: true, saveUninitialized: true }));
-app.use(passport.initialize());
-app.use(passport.session());
+const productManager = new ProductManager();
+const cartManager = new CartManager();
 
-app.engine('.hbs', exphbs.engine({ extname: '.hbs', defaultLayout: "main"}));
+app.use(express.json());
+app.engine(".hbs", exphbs.engine({ extname: ".hbs", defaultLayout: "main" }));
 app.set("view engine", ".hbs");
 app.use(express.static(__dirname + "/public"));
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/sessions', apiRoutes);
+app.use(
+  session({
+    secret: "secret",
+    resave: false,
+    saveUninitialized: true,
+  })
+);
 
-// Endpoint para obtener productos con paginación, filtros y ordenamiento
-app.get("/api/products", async (req, res) => {
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.use(
+  new LocalStrategy(async (email, password, done) => {
+    try {
+      const user = await User.findOne({ email });
+      if (!user) return done(null, false);
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) return done(null, false);
+      return done(null, user);
+    } catch (error) {
+      return done(error);
+    }
+  })
+);
+
+passport.use(
+  new GitHubStrategy(
+    {
+      clientID: GITHUB_CLIENT_ID,
+      clientSecret: GITHUB_CLIENT_SECRET,
+      callbackURL: "http://localhost:3000/auth/github/callback",
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        let user = await User.findOne({ githubId: profile.id });
+        if (!user) {
+          user = await User.create({
+            githubId: profile.id,
+            username: profile.username,
+          });
+        }
+        return done(null, user);
+      } catch (error) {
+        return done(error);
+      }
+    }
+  )
+);
+
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
   try {
-    const { limit = 10, page = 1, sort, query } = req.query;
-    const result = await productManager.getProducts({ limit, page, sort, query });
-    res.json(result);
+    const user = await User.findById(id);
+    done(null, user);
   } catch (error) {
-    res.status(500).json({ error: "Internal Server Error" });
+    done(error);
   }
 });
 
-// Endpoint para eliminar un producto del carrito
-app.delete("/api/carts/:cid/products/:pid", async (req, res) => {
-  try {
-    const { cid, pid } = req.params;
-    await cartManager.removeProductFromCart(cid, pid);
-    res.json({ status: "success" });
-  } catch (error) {
-    res.status(500).json({ error: "Internal Server Error" });
-  }
+app.post("/login", passport.authenticate("local", { failureRedirect: "/login" }), (req, res) => {
+  res.redirect("/products");
 });
 
-// Ruta para renderizar la vista home.handlebars
-app.get("/home", async (req, res) => {
+app.get("/auth/github", passport.authenticate("github"));
+
+app.get("/auth/github/callback", passport.authenticate("github", { failureRedirect: "/login" }), (req, res) => {
+  res.redirect("/products");
+});
+
+app.get("/login", (req, res) => {
+  res.render("login");
+});
+
+app.get("/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error(err);
+    }
+    res.redirect("/login");
+  });
+});
+
+app.get("/products", isAuthenticated, async (req, res) => {
   try {
     const products = await productManager.getProducts();
-    res.render("home", { products });
+    res.render("products", { products });
   } catch (error) {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-// Implementa las rutas y controladores para el chat...
-
-// Manejo de errores 404
-app.use((req, res, next) => {
-  res.status(404).json({ error: "Route not found" });
+app.get("/profile", isAuthenticated, (req, res) => {
+  res.render("profile", { user: req.session.user });
 });
 
-// Manejo de errores
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: "Internal Server Error" });
-});
+const isAuthenticated = (req, res, next) => {
+  if (req.session && req.session.user) {
+    return next();
+  } else {
+    res.redirect("/login");
+  }
+};
+
+const isAdmin = (req, res, next) => {
+  if (req.session && req.session.user && req.session.user.role === "admin") {
+    return next();
+  } else {
+    res.redirect("/profile");
+  }
+};
 
 server.listen(3000, () => {
   console.log(`Server is listening at http://localhost:3000`);
