@@ -1,7 +1,7 @@
 // apiRoutes.js
 const express = require('express');
 const passport = require('passport');
-const User = require('./userModel');
+const User = require('./models/userModel');
 
 const router = express.Router();
 

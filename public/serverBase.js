@@ -2,7 +2,7 @@ const express = require("express");
 const exphbs = require("express-handlebars");
 const http = require("http");
 const socketIO = require("socket.io");
-const ProductManager = require("./productManager");
+const ProductManager = require("../services/ProductManager");
 class ServerBase {
   constructor(port, productFilePath, cartFilePath) {
     this.port = port;

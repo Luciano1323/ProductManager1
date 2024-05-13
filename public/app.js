@@ -7,8 +7,8 @@ const LocalStrategy = require("passport-local").Strategy;
 const GitHubStrategy = require("passport-github").Strategy;
 const bcrypt = require("bcrypt");
 const { User } = require("./models");
-const ProductManager = require("./productManager");
-const CartManager = require("./cartManager");
+const ProductManager = require("../services/ProductManager");
+const CartManager = require("../services/cartManager");
 const mongoose = require("mongoose");
 
 const app = express();
