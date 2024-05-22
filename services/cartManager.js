@@ -1,22 +1,38 @@
-const { Cart } = require('../models/db');
+const { Cart, Product } = require('../models/db');
+const Ticket = require('../models/ticketModel');
 
 class CartManager {
-  constructor() {}
+  async purchaseCart(cartId) {
+    const cart = await Cart.findById(cartId).populate('products');
+    if (!cart) throw new Error('Cart not found');
 
-  async removeProductFromCart(cartId, productId) {
-    try {
-      const cart = await Cart.findById(cartId);
-      if (!cart) {
-        throw new Error("Cart not found");
+    const unavailableProducts = [];
+    let totalAmount = 0;
+
+    for (const product of cart.products) {
+      if (product.stock < 1) {
+        unavailableProducts.push(product._id);
+      } else {
+        product.stock -= 1;
+        totalAmount += product.price;
+        await product.save();
       }
-      cart.products = cart.products.filter(product => product.toString() !== productId);
-      await cart.save();
-    } catch (error) {
-      throw new Error("Error removing product from cart: " + error.message);
     }
-  }
 
-  // Otros métodos para la gestión del carrito...
+    const ticket = new Ticket({
+      amount: totalAmount,
+      purchaser: 'user@example.com', // Replace with actual user email
+    });
+    await ticket.save();
+
+    cart.products = cart.products.filter(product => unavailableProducts.includes(product._id));
+    await cart.save();
+
+    return {
+      ticket,
+      unavailableProducts,
+    };
+  }
 }
 
 module.exports = CartManager;

@@ -1,12 +1,13 @@
-// apiRoutes.js
+// routes/apiRoutes.js
 const express = require('express');
 const passport = require('passport');
-const User = require('./models/userModel');
+const UserDTO = require('../dto/userDto');
 
 const router = express.Router();
 
 router.get('/current', passport.authenticate('jwt', { session: false }), (req, res) => {
-  res.json(req.user);
+  const userDTO = new UserDTO(req.user);
+  res.json(userDTO);
 });
 
 module.exports = router;
