@@ -1,20 +1,19 @@
-// productController.js
 const ProductManager = require('../services/productService');
 
-exports.getProducts = async (req, res) => {
-  try {
-    const products = await ProductManager.getProducts();
-    res.json(products);
-  } catch (error) {
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-};
-
-exports.addProduct = async (req, res) => {
+exports.addProduct = async (req, res, next) => {
   try {
     const product = await ProductManager.addProduct(req.body);
     res.json(product);
   } catch (error) {
-    res.status(500).json({ error: "Internal Server Error" });
+    next(new Error('INVALID_PRODUCT_DATA'));
+  }
+};
+
+exports.getProducts = async (req, res, next) => {
+  try {
+    const products = await ProductManager.getProducts();
+    res.json(products);
+  } catch (error) {
+    next(new Error('INTERNAL_SERVER_ERROR'));
   }
 };

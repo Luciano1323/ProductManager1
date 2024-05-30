@@ -17,7 +17,11 @@ const io = socketIO(server);
 
 const productManager = new ProductManager();
 const cartManager = new CartManager();
+const mockRoutes = require('./routes/mockRoutes');
+const errorHandler = require('./middleware/errorHandler');
 
+app.use(errorHandler);
+app.use('/api', mockRoutes);
 app.use(express.json());
 app.engine(".hbs", exphbs.engine({ extname: ".hbs", defaultLayout: "main" }));
 app.set("view engine", ".hbs");
