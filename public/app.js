@@ -10,6 +10,8 @@ const { User } = require("./models");
 const ProductManager = require("../services/ProductManager");
 const CartManager = require("../services/cartManager");
 const mongoose = require("mongoose");
+const session = require('express-session');
+const logger = require("./utils/logger");
 
 const app = express();
 const server = http.createServer(app);
@@ -38,6 +40,15 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
+mongoose.connect('mongodb://localhost:27017/myapp', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+}).then(() => {
+  logger.info("Connected to MongoDB");
+}).catch((error) => {
+  logger.error("Error connecting to MongoDB", error);
+});
+
 passport.use(
   new LocalStrategy(async (email, password, done) => {
     try {
@@ -47,6 +58,7 @@ passport.use(
       if (!isMatch) return done(null, false);
       return done(null, user);
     } catch (error) {
+      logger.error("Error in LocalStrategy", error);
       return done(error);
     }
   })
@@ -70,6 +82,7 @@ passport.use(
         }
         return done(null, user);
       } catch (error) {
+        logger.error("Error in GitHubStrategy", error);
         return done(error);
       }
     }
@@ -85,6 +98,7 @@ passport.deserializeUser(async (id, done) => {
     const user = await User.findById(id);
     done(null, user);
   } catch (error) {
+    logger.error("Error in deserializeUser", error);
     done(error);
   }
 });
@@ -106,7 +120,7 @@ app.get("/login", (req, res) => {
 app.get("/logout", (req, res) => {
   req.session.destroy((err) => {
     if (err) {
-      console.error(err);
+      logger.error("Error during logout", err);
     }
     res.redirect("/login");
   });
@@ -117,6 +131,7 @@ app.get("/products", isAuthenticated, async (req, res) => {
     const products = await productManager.getProducts();
     res.render("products", { products });
   } catch (error) {
+    logger.error("Error fetching products", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
@@ -141,6 +156,17 @@ const isAdmin = (req, res, next) => {
   }
 };
 
+// Endpoint para probar los logs
+app.get('/loggerTest', (req, res) => {
+  logger.debug("This is a debug message");
+  logger.http("This is an http message");
+  logger.info("This is an info message");
+  logger.warning("This is a warning message");
+  logger.error("This is an error message");
+  logger.fatal("This is a fatal message");
+  res.send('Check the logs for output');
+});
+
 server.listen(3000, () => {
-  console.log(`Server is listening at http://localhost:3000`);
+  logger.info(`Server is listening at http://localhost:3000`);
 });
