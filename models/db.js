@@ -14,6 +14,7 @@ const productSchema = new Schema({
   thumbnail: String,
   code: String,
   stock: Number,
+  owner: { type: Schema.Types.ObjectId, ref: 'User', default: 'admin' },
 });
 
 const Product = mongoose.model('Product', productSchema);

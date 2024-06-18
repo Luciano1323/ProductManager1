@@ -33,6 +33,20 @@ class CartManager {
       unavailableProducts,
     };
   }
+
+  async addToCart(userId, productId) {
+    const user = await User.findById(userId);
+    const product = await Product.findById(productId);
+
+    if (user.role === 'premium' && product.owner.equals(user._id)) {
+      throw new Error('Premium users cannot add their own products to the cart');
+    }
+
+    const cart = await Cart.findById(user.cart);
+    cart.products.push(productId);
+    await cart.save();
+    return cart;
+  }
 }
 
 module.exports = CartManager;
