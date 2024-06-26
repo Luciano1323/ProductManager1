@@ -12,6 +12,7 @@ const CartManager = require("../services/cartManager");
 const mongoose = require("mongoose");
 const session = require('express-session');
 const logger = require("./utils/logger");
+const swaggerSetup = require('./swagger'); // Importar configuración de Swagger
 
 const app = express();
 const server = http.createServer(app);
@@ -39,6 +40,9 @@ app.use(
 
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Integrar Swagger
+swaggerSetup(app);
 
 mongoose.connect('mongodb://localhost:27017/myapp', {
   useNewUrlParser: true,
