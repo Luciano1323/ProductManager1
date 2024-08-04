@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const ProductManager = require('../../services/ProductManager');
+const userService = require('../../services/userService');
+const mailService = require('../../services/mailService');
+const authMiddleware = require('../../middleware/authMiddleware');
 const productManager = new ProductManager();
 
 /**
@@ -58,6 +61,47 @@ router.get('/products', async (req, res) => {
     res.json(products);
   } catch (error) {
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+/**
+ * @swagger
+ * /products/{id}:
+ *   delete:
+ *     summary: Deletes a product by id
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The product id
+ *     responses:
+ *       200:
+ *         description: The product was deleted
+ *       404:
+ *         description: The product was not found
+ *       500:
+ *         description: Some error happened
+ */
+
+router.delete('/products/:id', authMiddleware.isAdmin, async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const product = await productManager.getProductById(productId);
+    if (product) {
+      await productManager.deleteProduct(productId);
+      const user = await userService.getUserById(product.ownerId);
+      if (user && user.role === 'premium') {
+        mailService.sendMail(user.email, 'Product Deleted', `Your product "${product.name}" has been deleted.`);
+      }
+      res.json({ message: 'Product deleted' });
+    } else {
+      res.status(404).json({ error: 'Product not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 

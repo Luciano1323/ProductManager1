@@ -3,6 +3,8 @@ const passport = require('passport');
 const multer = require('multer');
 const User = require('../../models/userModel');
 const { isAdmin } = require('../../middleware/authMiddleware');
+const userService = require('../../services/userService');
+const mailService = require('../../services/mailService');
 
 const router = express.Router();
 
@@ -23,6 +25,39 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
+
+// Ruta para obtener todos los usuarios
+router.get('/', passport.authenticate('jwt', { session: false }), isAdmin, async (req, res) => {
+  try {
+    const users = await userService.getAllUsers();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Ruta para eliminar usuarios inactivos
+router.delete('/', passport.authenticate('jwt', { session: false }), isAdmin, async (req, res) => {
+  try {
+    const deletedUsers = await userService.deleteInactiveUsers();
+    deletedUsers.forEach(user => {
+      mailService.sendMail(user.email, 'Account Deleted Due to Inactivity', 'Your account has been deleted due to inactivity.');
+    });
+    res.json({ message: 'Inactive users deleted' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Ruta para ver, modificar y eliminar un usuario (solo accesible para el administrador)
+router.get('/admin', passport.authenticate('jwt', { session: false }), isAdmin, async (req, res) => {
+  try {
+    const users = await userService.getAllUsers();
+    res.render('admin/manageUsers', { users });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Ruta para actualizar usuario a premium
 router.patch('/premium/:uid', passport.authenticate('jwt', { session: false }), isAdmin, async (req, res) => {
