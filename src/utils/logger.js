@@ -1,8 +1,7 @@
 const { createLogger, format, transports } = require('winston');
-const { combine, timestamp, printf, errors, json, simple } = format;
+const { combine, timestamp, printf, errors } = format;
 const path = require('path');
 
-// Definir niveles de logs
 const levels = {
   fatal: 0,
   error: 1,
@@ -12,7 +11,6 @@ const levels = {
   debug: 5,
 };
 
-// Formato de log para consola
 const consoleFormat = combine(
   timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   errors({ stack: true }),
@@ -21,14 +19,12 @@ const consoleFormat = combine(
   })
 );
 
-// Formato de log para archivos
 const fileFormat = combine(
   timestamp(),
   errors({ stack: true }),
-  json()
+  format.json()
 );
 
-// Logger de desarrollo
 const devLogger = createLogger({
   levels,
   level: 'debug',
@@ -38,14 +34,13 @@ const devLogger = createLogger({
   ],
 });
 
-// Logger de producción
 const prodLogger = createLogger({
   levels,
   level: 'info',
   format: fileFormat,
   transports: [
     new transports.Console({
-      format: simple(),
+      format: format.simple(),
     }),
     new transports.File({
       filename: path.join(__dirname, '../logs/errors.log'),

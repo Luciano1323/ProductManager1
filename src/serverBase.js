@@ -1,16 +1,19 @@
-const express = require('express');
+require('dotenv').config();
 const mongoose = require('mongoose');
+const express = require('express');
 const passport = require('passport');
 const session = require('express-session');
 const cors = require('cors');
 const logger = require('./utils/logger');
 const config = require('./config/config');
+const swaggerSetup = require('./config/swagger');
 const app = express();
 
 // Configuración de la base de datos
-mongoose.connect(config.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(config.MONGODB_URI)
   .then(() => logger.info("Connected to MongoDB"))
   .catch((error) => logger.error("Error connecting to MongoDB", error));
+
 
 // Configuración de express
 app.use(express.json());

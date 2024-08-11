@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const Cart = require('../../models/cartModel');
+const CartManager = require('../../services/cartManager');
+const cartManager = new CartManager();
+const authMiddleware = require('../../middleware/authMiddleware');
 
 // Obtener todos los carritos
 router.get('/', async (req, res) => {
@@ -59,6 +62,28 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: 'Cart deleted' });
   } catch (error) {
     res.status(500).json({ error: 'Error deleting cart' });
+  }
+});
+
+// Agregar un producto al carrito
+router.post('/:cartId/products/:productId', async (req, res) => {
+  try {
+    const { cartId, productId } = req.params;
+    const cart = await cartManager.addToCart(cartId, productId); // Asegúrate de pasar los IDs correctos
+    res.json(cart);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Comprar el carrito
+router.post('/:cartId/checkout', async (req, res) => {
+  try {
+    const { cartId } = req.params;
+    const result = await cartManager.purchaseCart(cartId);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 });
 

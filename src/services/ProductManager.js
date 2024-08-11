@@ -1,65 +1,32 @@
-const { Product } = require('../models/db');
+// src/services/ProductManager.js
+const Product = require('../models/productModel'); // Asegúrate de que la ruta es correcta
 
 class ProductManager {
-  async addProduct({ title, description, price, thumbnail, code, stock }) {
-    try {
-      const newProduct = new Product({
-        title,
-        description,
-        price,
-        thumbnail,
-        code,
-        stock,
-      });
-      await newProduct.save();
-      return newProduct;
-    } catch (error) {
-      throw new Error("Error adding product: " + error.message);
-    }
-  }
-
   async getProducts() {
     try {
-      const products = await Product.find();
-      return products;
+      return await Product.find(); // Asumiendo que 'Product' es el modelo de Mongoose
     } catch (error) {
-      throw new Error("Error fetching products: " + error.message);
+      console.error('Error getting products:', error);
+      throw error;
     }
   }
 
-  async getProductById(productId) {
+
+  async getProductById(id) {
     try {
-      const product = await Product.findById(productId);
-      if (!product) {
-        throw new Error("Product not found");
-      }
-      return product;
+      return await Product.findById(id); // Obtiene un producto por ID
     } catch (error) {
-      throw new Error("Error fetching product: " + error.message);
+      console.error('Error in getProductById:', error);
+      throw error;
     }
   }
 
-  async updateProduct(productId, updatedFields) {
+  async deleteProduct(id) {
     try {
-      const updatedProduct = await Product.findByIdAndUpdate(productId, updatedFields, { new: true });
-      if (!updatedProduct) {
-        throw new Error("Product not found");
-      }
-      return updatedProduct;
+      return await Product.findByIdAndDelete(id); // Elimina un producto por ID
     } catch (error) {
-      throw new Error("Error updating product: " + error.message);
-    }
-  }
-
-  async deleteProduct(productId) {
-    try {
-      const deletedProduct = await Product.findByIdAndDelete(productId);
-      if (!deletedProduct) {
-        throw new Error("Product not found");
-      }
-      return deletedProduct;
-    } catch (error) {
-      throw new Error("Error deleting product: " + error.message);
+      console.error('Error in deleteProduct:', error);
+      throw error;
     }
   }
 }

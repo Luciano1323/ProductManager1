@@ -11,6 +11,12 @@ class CartManager {
     let totalAmount = 0;
 
     for (const product of cart.products) {
+      // Verificar si el producto tiene todos los campos requeridos
+      if (!product.name || !product.price || !product.stock) {
+        unavailableProducts.push(product._id);
+        continue;
+      }
+      
       if (product.stock < 1) {
         unavailableProducts.push(product._id);
       } else {
@@ -22,11 +28,11 @@ class CartManager {
 
     const ticket = new Ticket({
       amount: totalAmount,
-      purchaser: 'user@example.com', // Replace with actual user email
+      purchaser: 'user@example.com', // Cambia esto por el correo real del usuario
     });
     await ticket.save();
 
-    cart.products = cart.products.filter(product => unavailableProducts.includes(product._id));
+    cart.products = cart.products.filter(product => !unavailableProducts.includes(product._id));
     await cart.save();
 
     return {
@@ -35,19 +41,24 @@ class CartManager {
     };
   }
 
-  async addToCart(userId, productId) {
-    const user = await User.findById(userId);
+
+  async addToCart(cartId, productId) {
+    const cart = await Cart.findById(cartId);
+    if (!cart) throw new Error('Cart not found');
+
     const product = await Product.findById(productId);
+    if (!product) throw new Error('Product not found');
 
-    if (user.role === 'premium' && product.owner.equals(user._id)) {
-      throw new Error('Premium users cannot add their own products to the cart');
+    if (cart.products.includes(productId)) {
+      throw new Error('Product already in cart');
     }
-
-    const cart = await Cart.findById(user.cart);
-    cart.products.push(productId);
+    cart.products = [];
     await cart.save();
-    return cart;
+    return { message: 'Purchase successful, cart is now empty' };
+  } catch (error) {
+    throw new Error(error.message);
   }
+  
 }
 
 module.exports = CartManager;

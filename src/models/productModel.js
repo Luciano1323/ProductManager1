@@ -1,9 +1,14 @@
 const mongoose = require('mongoose');
 
 const productSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  price: { type: Number, required: true },
-  description: { type: String, required: true }
+  title: String,
+  description: String,
+  price: Number,
+  thumbnail: String,
+  code: String,
+  stock: Number,
 });
 
-module.exports = mongoose.model('Product', productSchema);
+const Product = mongoose.model('Product', productSchema); // Esto debe ser eliminado
+
+module.exports = Product;

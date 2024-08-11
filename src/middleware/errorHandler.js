@@ -1,8 +1,8 @@
-const ERROR_DICTIONARY = require('../utils/errorDictionary');
+const logger = require('../utils/logger');
 
 const errorHandler = (err, req, res, next) => {
-  const error = ERROR_DICTIONARY[err.message] || ERROR_DICTIONARY.INTERNAL_SERVER_ERROR;
-  res.status(error.code).json({ error: error.message });
+  logger.error(err.message);
+  res.status(500).json({ error: err.message });
 };
 
 module.exports = errorHandler;

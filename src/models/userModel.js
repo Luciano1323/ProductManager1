@@ -1,21 +1,12 @@
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-const userSchema = new mongoose.Schema({
-  githubId: String,
-  username: String,
-  username: { type: String, required: true },
-  email: { type: String, required: true },
+const userSchema = new Schema({
+  username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, default: 'user' },
-  documents: [
-    {
-      name: String,
-      reference: String
-    }
-  ],
-  last_connection: { type: Date }
+  products: [{ type: Schema.Types.ObjectId, ref: 'Product' }],
+  user: { type: Schema.Types.ObjectId, ref: 'User' } // Referencia al carrito
 });
-
-const User = mongoose.model('User', userSchema);
 
 module.exports = mongoose.model('User', userSchema);
