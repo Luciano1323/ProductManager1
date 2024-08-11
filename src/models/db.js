@@ -1,31 +1,25 @@
+// models/db.js
 const mongoose = require('mongoose');
 
-mongoose.connect('mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.2.1', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
-
-const Schema = mongoose.Schema;
-
-const productSchema = new Schema({
+const productSchema = new mongoose.Schema({
   title: String,
   description: String,
   price: Number,
   thumbnail: String,
   code: String,
   stock: Number,
-  owner: { type: Schema.Types.ObjectId, ref: 'User', default: 'admin' },
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 });
 
 const Product = mongoose.model('Product', productSchema);
 
-const cartSchema = new Schema({
-  products: [{ type: Schema.Types.ObjectId, ref: 'Product' }]
+const cartSchema = new mongoose.Schema({
+  products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }]
 });
 
 const Cart = mongoose.model('Cart', cartSchema);
 
-const messageSchema = new Schema({
+const messageSchema = new mongoose.Schema({
   user: String,
   message: String,
 });

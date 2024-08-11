@@ -1,8 +1,6 @@
 const { Product } = require('../models/db');
 
 class ProductManager {
-  constructor() {}
-
   async addProduct({ title, description, price, thumbnail, code, stock }) {
     try {
       const newProduct = new Product({

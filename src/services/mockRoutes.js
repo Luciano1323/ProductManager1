@@ -1,11 +1,9 @@
 const express = require('express');
-const MockingService = require('../services/mockingService');
-
 const router = express.Router();
 
-router.get('/mockingproducts', (req, res) => {
-  const products = MockingService.generateMockProducts();
-  res.json(products);
+// Define aquí tus rutas de mocking
+router.get('/someMockRoute', (req, res) => {
+  res.json({ message: 'This is a mocked route' });
 });
 
 module.exports = router;

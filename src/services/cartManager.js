@@ -1,5 +1,6 @@
 const { Cart, Product } = require('../models/db');
 const Ticket = require('../models/ticketModel');
+const User = require('../models/userModel');
 
 class CartManager {
   async purchaseCart(cartId) {

@@ -1,89 +1,46 @@
-const express = require("express");
-const exphbs = require("express-handlebars");
-const http = require("http");
-const socketIO = require("socket.io");
-const ProductManager = require("../services/ProductManager");
-class ServerBase {
-  constructor(port, productFilePath, cartFilePath) {
-    this.port = port;
-    this.productFilePath = productFilePath;
-    this.cartFilePath = cartFilePath;
-    this.app = express();
-    this.server = http.createServer(this.app);
-    this.io = socketIO(this.server);
+const express = require('express');
+const mongoose = require('mongoose');
+const passport = require('passport');
+const session = require('express-session');
+const cors = require('cors');
+const logger = require('./utils/logger');
+const config = require('./config/config');
+const app = express();
 
-    this.ProductManager = new ProductManager(this.productFilePath, this.cartFilePath);
+// Configuración de la base de datos
+mongoose.connect(config.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => logger.info("Connected to MongoDB"))
+  .catch((error) => logger.error("Error connecting to MongoDB", error));
 
-    this.setupExpress();
-    this.setupSocketIO();
-  }
+// Configuración de express
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors());
 
-  setupExpress() {
-    this.app.use(express.json());
-    this.app.engine('.hbs', exphbs.engine({ extname: '.hbs', defaultLayout: "main"}));
-    this.app.set("view engine", ".hbs");
+// Configuración de sesiones
+app.use(session({
+  secret: config.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: true,
+}));
 
-    // Configurar el middleware para servir archivos estáticos
-    this.app.use(express.static(__dirname + "/public"));
+// Configuración de Passport
+app.use(passport.initialize());
+app.use(passport.session());
 
-    // Products Routes
-    this.app.get("/api/products", async (req, res) => {
-      try {
-        const products = await this.ProductManager.getProducts();
-        res.json(products);
-      } catch (error) {
-        res.status(500).json({ error: "Internal Server Error" });
-      }
-    });
+// Configuración de rutas
+app.use('/api/users', require('./routes/api/users'));
+app.use('/api/products', require('./routes/api/products'));
+app.use('/api/carts', require('./routes/api/carts'));
+app.use('/api/mocking', require('./services/mockRoutes'));
 
-    // Ruta para renderizar la vista home.handlebars
-    this.app.get("/home", async (req, res) => {
-      try {
-        const products = await this.ProductManager.getProducts();
-        res.render("home", { products });
-      } catch (error) {
-        res.status(500).json({ error: "Internal Server Error" });
-      }
-    });
+// Manejo de errores
+app.use((req, res) => {
+  res.status(404).json({ error: "Route not found" });
+});
 
-    // 404 Route
-    this.app.use((req, res) => {
-      res.status(404).json({ error: "Route not found" });
-    });
-  }
-
-  setupSocketIO() {
-    const io = this.io;
-
-    io.on("connection", (socket) => {
-      console.log("Usuario conectado");
-
-      // Escuchar evento 'newProduct' para cuando se agregue un nuevo producto
-      socket.on("newProduct", async (product) => {
-        // Emitir evento 'updateProducts' a todos los clientes
-        const newProduct = await this.ProductManager.addProduct(product);
-        io.emit("updateProducts", newProduct);
-      });
-
-      // Escuchar evento 'deleteProduct' para cuando se elimine un producto
-      socket.on("deleteProduct", (productId) => {
-        // Emitir evento 'updateProducts' a todos los clientes
-        this.ProductManager.deleteProduct(productId);
-        io.emit("updateProducts");
-      });
-
-      // Manejar la desconexión de WebSocket
-      socket.on("disconnect", () => {
-        console.log("Usuario desconectado");
-      });
-    });
-  }
-
-  start() {
-    this.server.listen(this.port, () => {
-      console.log(`Server is listening at http://localhost:${this.port}`);
-    });
-  }
-}
-
-module.exports = ServerBase;
+// Iniciar el servidor
+const port = config.PORT || 3000;
+app.listen(port, () => {
+  logger.info(`Server is running on port ${port}`);
+});
