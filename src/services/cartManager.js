@@ -43,22 +43,35 @@ class CartManager {
 
 
   async addToCart(cartId, productId) {
-    const cart = await Cart.findById(cartId);
-    if (!cart) throw new Error('Cart not found');
+    try {
+      const cart = await Cart.findById(cartId);
+      if (!cart) throw new Error('Cart not found');
 
-    const product = await Product.findById(productId);
-    if (!product) throw new Error('Product not found');
-
-    if (cart.products.includes(productId)) {
-      throw new Error('Product already in cart');
+      // Lógica para agregar el producto al carrito
+      cart.products.push(productId);
+      await cart.save();
+      return cart;
+    } catch (error) {
+      throw new Error(error.message);
     }
-    cart.products = [];
-    await cart.save();
-    return { message: 'Purchase successful, cart is now empty' };
-  } catch (error) {
-    throw new Error(error.message);
   }
-  
+
+  async purchaseCart(cartId) {
+    try {
+      const cart = await Cart.findById(cartId);
+      if (!cart) throw new Error('Cart not found');
+
+      // Lógica para realizar la compra
+      // Vaciar el carrito después de la compra
+      cart.products = [];
+      await cart.save();
+      return { message: 'Purchase successful' };
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
 }
+
+module.exports = CartManager;
 
 module.exports = CartManager;
